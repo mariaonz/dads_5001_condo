@@ -1,67 +1,119 @@
 import pandas as pd
 import streamlit as st
-#from sqlalchemy import create_engine
-from pymongo import MongoClient
 import duckdb
+import os
 
-# === Set page ===
-st.set_page_config(
-    page_title=" Home",
-    page_icon="🏠",
-    layout="wide",
-    #initial_sidebar_state="collapsed"
-)
+# ตั้งค่า layout
+st.set_page_config(page_title="Smart Rent BKK", page_icon="🌆", layout="wide")
 
-# === Database Connections ===
-#engine = create_engine("mysql+mysqlconnector://root:admin@localhost:3306/dads5001db")
-#client = MongoClient("mongodb://root:admin@localhost:27017/?authSource=admin")
+# เฟื่อตำประมวล DuckDB จาก CSV
+@st.cache_data
+def create_duckdb_from_csv():
+    if not os.path.exists("condo.duckdb"):
+        df = pd.read_csv("data_cleaned.csv")
+        con = duckdb.connect("condo.duckdb")
+        con.execute("DROP TABLE IF EXISTS condo")
+        con.execute("CREATE TABLE condo AS SELECT * FROM df")
+        con.close()
+        return "created"
+    else:
+        return "exists"
 
-# === Load data from DuckDB ===
-def load_data():
+# ดึงข้อมูลจาก duckdb
+@st.cache_data
+def load_data_from_duckdb():
     con = duckdb.connect("condo.duckdb")
     df = con.execute("SELECT * FROM condo").df()
     con.close()
     return df
 
-# === Helper function ===
+# แปลงรายงเป็นดาวน์
+def convert_for_download(df):
+    return df.to_csv(index=False).encode("utf-8")
+
+# แปลงระดับเป็นดาวแสดง
 def rating_to_stars(rating, max_stars=5):
     if pd.isna(rating):
         return "N/A"
-    full_stars = "⭐" * int(rating)
-    empty_stars = "☆" * (max_stars - int(rating))
-    return full_stars + empty_stars
+    integer_part = int(rating)
+    decimal_part = rating - integer_part
+    full_stars = "⭐" * integer_part
+    half_star = "½" if decimal_part >= 0.5 else ""
+    empty_stars = "☆" * (max_stars - integer_part - (1 if decimal_part >= 0.5 else 0))
+    return full_stars + half_star + empty_stars
 
-# === Page content ===
-st.title("🏠 Smart Rent BKK")
-st.markdown("""
-Explore Bangkok's condo rental market! This dashboard shows price distributions, factors affecting rent, predictions, and AI-powered recommendations to help you make the smartest decision.
-""")
+# === MAIN PAGE ===
+def main_page():
+    status = create_duckdb_from_csv()
+    df = load_data_from_duckdb()
 
-st.image("https://raw.githubusercontent.com/ppitchaporn/DADS5001-Condo/a785a69fe796a14d3023d993a8c89289c4bd067a/Condo_image.jpg")
+    st.title("Smart Rent BKK 🌆")
+    st.caption("(Data source: DuckDB from data_cleaned.csv)")
 
-st.header("🏢 All Condominium List")
-st.markdown("(Loaded from DuckDB)")
+    st.image("https://raw.githubusercontent.com/ppitchaporn/DADS5001-Condo/a785a69fe796a14d3023d993a8c89289c4bd067a/Condo_image.jpg")
 
-# Load data
-df = load_data()
-df["Rating"] = df["star"].apply(rating_to_stars)
+    options = [5, 10, 25, 50, 100, "All"]
+    selection_rows = st.pills("Select Top Rows:", options, selection_mode="single", default=5)
+    st.markdown(f"Displaying {selection_rows} rows.")
 
-# === Display Table ===
-st.dataframe(
-    df,
-    column_config={
-        "Rating": st.column_config.Column("Rating", help="คะแนนรีวิว", width="small"),
-        "star": None
-    },
-    column_order=[
-        "Condo Name", "Rating", "Address", "Rental Price (Baht)", "#Bed", "#Bath",
-        "Rail Station", "Distance from rails (Meters)", "Time to rails (Minutes)"
-    ],
-    hide_index=True
-)
+    df_display = df.copy()
+    if selection_rows != "All":
+        df_display = df_display.head(int(selection_rows))
 
-# === MongoDB connection info ===
-#st.markdown("## 🔗 Connect to MongoDB")
-#db = client.dads5001db
-#collections = db.list_collection_names()
-#st.write(collections)
+    df_display['Rating'] = df_display['star'].apply(rating_to_stars)
+
+    st.dataframe(
+        df_display,
+        column_config={
+            "Rating": st.column_config.Column("Rating", help="คะแนนรีวิว", width="small"),
+            "star": None
+        },
+        column_order=[
+            "condo_name", "Rating", "rent_cd_address", "rent_cd_price",
+            "rent_cd_bed", "rent_cd_bath", "rent_cd_features_station",
+            "near_rail_meter", "rent_cd_features_time"
+        ],
+        hide_index=True
+    )
+
+    # Download button
+    csv = convert_for_download(df)
+    st.download_button("Download CSV", data=csv, file_name="data.csv", mime="text/csv")
+
+    # Footer
+    st.markdown("---")
+    col1, col2 = st.columns(2)
+    with col1:
+        st.subheader("Name")
+        st.write("Mr.Kitisak Namtae")
+        st.write("Mr.Kantapong Charusiri")
+        st.write("Miss Pitchaporn Nimdum")
+        st.write("Miss Pornchanok Tuntikulwattanakit")
+        st.write("Mr.Suparerk Jankam")
+    with col2:
+        st.subheader("ID")
+        st.write("6710422007")
+        st.write("6710422015")
+        st.write("6710422016")
+        st.write("6710422023")
+        st.write("6710422028")
+
+    st.subheader("Rate Us")
+    sentiment_mapping = ["one", "two", "three", "four", "five"]
+    selected = st.feedback("stars")
+    if selected is not None:
+        st.markdown(f"You selected {sentiment_mapping[selected]} star(s). \n Thank You. 😊")
+
+# === Page navigation ===
+#home_page = st.Page(main_page, title='Home page', icon=":material/home:")
+#descipt = st.Page("page2.py", title='Descriptive Analysis', icon=":material/database:")
+#relation_predict = st.Page("page3.py", title='Relationship Analysis & Price Prediction', icon=":material/bar_chart:")
+#geospatial_class = st.Page("page4.py", title='Geospatial Analysis & Classification Result', icon=":material/bar_chart:")
+#Ai_search = st.Page("page5.py", title=' Advanced Search & Comparison', icon=":material/note:")
+
+#pg = st.navigation({"Menu": [home_page, descipt, relation_predict, geospatial_class, Ai_search]})
+#pg.run()
+
+# === MAIN ===
+if __name__ == '__main__':
+    main_page()
