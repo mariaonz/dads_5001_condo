@@ -4,14 +4,13 @@ import plotly.express as px
 import numpy as np
 from pymongo import MongoClient
 
-st.set_page_config(page_title="🚉 [BTS/MRT] Proximity vs Rent Price", layout="wide")
+st.set_page_config(page_title=" [BTS/MRT] Proximity vs Rent Price", layout="wide")
 
 @st.cache_data
 
 #CSV
 #def load_data():
 #    return pd.read_csv('https://raw.githubusercontent.com/ppitchaporn/DADS5001-Condo/refs/heads/main/data_cleaned.csv')
-
 
 #No-SQL - MongoDB
 def load_data():
