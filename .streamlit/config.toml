@@ -1,0 +1,17 @@
+# .streamlit/config.toml
+
+[ui]
+pageTitle = "Condo Rental Explorer"
+layout = "wide"  # หรือ "centered"
+
+[theme]
+primaryColor = "#1E88E5"  # น้ำเงินสด (เหมาะกับการสำรวจ)
+backgroundColor = "#FFFFFF"
+secondaryBackgroundColor = "#F5F7FA"
+textColor = "#000000"
+font = "sans serif"
+
+[server]
+headless = true
+enableCORS = false
+port = 8501

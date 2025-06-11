@@ -2,12 +2,42 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 import numpy as np
+from pymongo import MongoClient
 
 st.set_page_config(page_title="🚉 [BTS/MRT] Proximity vs Rent Price", layout="wide")
 
 @st.cache_data
+
+#CSV
+#def load_data():
+#    return pd.read_csv('https://raw.githubusercontent.com/ppitchaporn/DADS5001-Condo/refs/heads/main/data_cleaned.csv')
+
+
+#No-SQL - MongoDB
 def load_data():
-    return pd.read_csv("data_cleaned.csv")
+    
+    mongo_uri = st.secrets["MONGO_URI"]
+    
+    client = MongoClient(mongo_uri)
+    db = client["data_cleaned"]
+    collection = db["data_cleaned"]
+    
+    data = list(collection.find())
+    
+    df = pd.DataFrame(data)
+    
+    if "_id" in df.columns:
+        df = df.drop(columns=["_id"])
+    
+    return df
+
+
+
+
+
+
+
+
 
 df_raw = load_data()
 
@@ -133,7 +163,6 @@ with st.expander("🏢 Compare Selected Condos by Average Price", expanded=True)
     else:
         st.info("Please select at least one condo to compare.")
 
-
 # 🧠 Recommendation Panel
 with st.expander("💡 Recommended Condos Based on Price-to-Market", expanded=True):
     if selected_condos and "condo_compare" in locals():
@@ -152,9 +181,6 @@ with st.expander("💡 Recommended Condos Based on Price-to-Market", expanded=Tr
         """)
     else:
         st.info("Please select condos first to generate recommendation.")
-
-
-
 
 with st.expander("🚉 Average Rent by [BTS/MRT] Station", expanded=True):
     station_avg = filtered_df.dropna(subset=["rent_cd_features_station"]).groupby(
