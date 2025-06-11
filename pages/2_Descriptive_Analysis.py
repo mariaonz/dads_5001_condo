@@ -32,12 +32,6 @@ def load_data():
 
 
 
-
-
-
-
-
-
 df_raw = load_data()
 
 # === Sidebar ===
