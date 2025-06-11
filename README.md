@@ -5,10 +5,10 @@ A basic Streamlit app is provided for descriptive analysis using Plotly.
 
 ## Usage
 
-Run the app with:
+Run the main dashboard with:
 
 ```bash
-streamlit run pages/2_Descriptive_Analysis.py
+streamlit run condo_main.py
 ```
 
-Use the dropdown to choose a column and visualize its distribution or counts.
+The `pages` folder contains additional pages, including a descriptive analysis tool for exploring individual columns.
